@@ -1,4 +1,3 @@
-// MeetingRoom.tsx (updated)
 'use client'
 
 import { useUser } from "@clerk/nextjs"
@@ -89,14 +88,14 @@ interface Member {
   handRaised?: boolean
 }
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001"
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "https://lazy-years-clean.loca.lt/"
 
 // Emoji data for chat
 const emojis = [
   '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾'
 ]
 
-// Enhanced Whiteboard Component with Zoom and Better Drawing
+// Enhanced Whiteboard Component with All Fixes
 const InteractiveWhiteboard: React.FC<{
   roomId: string
   socket: Socket | null
@@ -117,6 +116,7 @@ const InteractiveWhiteboard: React.FC<{
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
   const [lastPanPoint, setLastPanPoint] = useState<{x: number, y: number} | null>(null)
+  const [fillShapes, setFillShapes] = useState(false)
 
   const [whiteboardState, setWhiteboardState] = useState<WhiteboardState>({
     drawings: [],
@@ -158,7 +158,6 @@ const InteractiveWhiteboard: React.FC<{
 
     return () => {
       resizeObserver.disconnect()
-      window.removeEventListener('resize', resizeCanvas)
     }
   }, [])
 
@@ -227,13 +226,13 @@ const InteractiveWhiteboard: React.FC<{
     }
   }, [socket])
 
-  // Redraw all drawings with zoom and pan
+  // Redraw all drawings with zoom and pan - NO GRID BACKGROUND
   const redrawCanvas = useCallback(() => {
     const canvas = canvasRef.current
     const ctx = canvas?.getContext('2d')
     if (!canvas || !ctx) return
 
-    // Clear with white background
+    // Clear with white background - NO GRID
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
@@ -252,6 +251,8 @@ const InteractiveWhiteboard: React.FC<{
     if (whiteboardState.backgroundImage) {
       const img = new Image()
       img.onload = () => {
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, width, height)
         ctx.drawImage(img, 0, 0, width, height)
         drawAllShapes(ctx)
       }
@@ -264,28 +265,7 @@ const InteractiveWhiteboard: React.FC<{
   }, [whiteboardState.drawings, whiteboardState.currentDrawing, whiteboardState.backgroundImage, zoom, pan])
 
   const drawAllShapes = (ctx: CanvasRenderingContext2D) => {
-    // Draw subtle grid (only when zoomed in enough)
-    if (zoom > 0.5) {
-      ctx.strokeStyle = '#f5f5f5'
-      ctx.lineWidth = 1
-      const gridSize = 20
-      const scale = window.devicePixelRatio || 1
-      const width = ctx.canvas.width / scale
-      const height = ctx.canvas.height / scale
-      
-      for (let x = 0; x <= width; x += gridSize) {
-        ctx.beginPath()
-        ctx.moveTo(x, 0)
-        ctx.lineTo(x, height)
-        ctx.stroke()
-      }
-      for (let y = 0; y <= height; y += gridSize) {
-        ctx.beginPath()
-        ctx.moveTo(0, y)
-        ctx.lineTo(width, y)
-        ctx.stroke()
-      }
-    }
+    // NO GRID - Clean white background only
 
     // Redraw all saved drawings
     whiteboardState.drawings.forEach(drawing => {
@@ -302,11 +282,11 @@ const InteractiveWhiteboard: React.FC<{
     redrawCanvas()
   }, [redrawCanvas])
 
-  // Enhanced drawing functions with zoom consideration
+  // Enhanced drawing functions - FIXED SHAPE FILLING
   const drawShape = (ctx: CanvasRenderingContext2D, drawing: DrawingData) => {
     ctx.strokeStyle = drawing.color
     ctx.fillStyle = drawing.color
-    ctx.lineWidth = drawing.strokeWidth / zoom // Adjust stroke width based on zoom
+    ctx.lineWidth = drawing.strokeWidth / zoom
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
 
@@ -346,9 +326,8 @@ const InteractiveWhiteboard: React.FC<{
           ctx.rect(start[0], start[1], width, height)
           if (drawing.fill) {
             ctx.fill()
-          } else {
-            ctx.stroke()
           }
+          ctx.stroke()
         }
         break
 
@@ -360,9 +339,8 @@ const InteractiveWhiteboard: React.FC<{
           ctx.arc(start[0], start[1], radius, 0, 2 * Math.PI)
           if (drawing.fill) {
             ctx.fill()
-          } else {
-            ctx.stroke()
           }
+          ctx.stroke()
         }
         break
 
@@ -376,9 +354,8 @@ const InteractiveWhiteboard: React.FC<{
           ctx.closePath()
           if (drawing.fill) {
             ctx.fill()
-          } else {
-            ctx.stroke()
           }
+          ctx.stroke()
         }
         break
 
@@ -445,11 +422,21 @@ const InteractiveWhiteboard: React.FC<{
     }
   }
 
-  // Mouse event handlers
+  // Mouse event handlers - FIXED DRAWING BOUNDARIES
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!canDraw || !isVisible) return
 
     const { x, y } = getMousePos(e)
+    
+    // Check if we're within canvas bounds
+    const canvas = canvasRef.current
+    if (!canvas) return
+    
+    const rect = canvas.getBoundingClientRect()
+    if (e.clientX < rect.left || e.clientX > rect.right || 
+        e.clientY < rect.top || e.clientY > rect.bottom) {
+      return
+    }
     
     if (whiteboardState.tool === 'select') {
       setIsPanning(true)
@@ -487,7 +474,7 @@ const InteractiveWhiteboard: React.FC<{
       points: [[x, y]],
       color: whiteboardState.tool === 'eraser' ? '#ffffff' : whiteboardState.color,
       strokeWidth: whiteboardState.tool === 'eraser' ? whiteboardState.strokeWidth * 3 : whiteboardState.strokeWidth,
-      fill: whiteboardState.tool === 'rectangle' || whiteboardState.tool === 'circle' || whiteboardState.tool === 'triangle',
+      fill: fillShapes,
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     }
 
@@ -509,6 +496,17 @@ const InteractiveWhiteboard: React.FC<{
     if (!isDrawing || !canDraw || !whiteboardState.currentDrawing || !startPos) return
 
     const { x, y } = getMousePos(e)
+    
+    // Boundary check for drawing
+    const canvas = canvasRef.current
+    if (!canvas) return
+    
+    const rect = canvas.getBoundingClientRect()
+    if (e.clientX < rect.left || e.clientX > rect.right || 
+        e.clientY < rect.top || e.clientY > rect.bottom) {
+      handleMouseUp()
+      return
+    }
     
     if (whiteboardState.tool === 'pen' || whiteboardState.tool === 'eraser') {
       const updatedDrawing = {
@@ -538,15 +536,19 @@ const InteractiveWhiteboard: React.FC<{
     setStartPos(null)
     
     if (whiteboardState.currentDrawing.points.length > 1 || whiteboardState.tool === 'text') {
-      const finalDrawing = { ...whiteboardState.currentDrawing }
+      const finalDrawing = { 
+        ...whiteboardState.currentDrawing,
+        fill: fillShapes
+      }
       setWhiteboardState(prev => ({
         ...prev,
         drawings: [...prev.drawings, finalDrawing],
         currentDrawing: null
       }))
       
-      // Emit to server for real-time sync
       socket?.emit('whiteboard:drawing', { roomId, drawing: finalDrawing })
+    } else {
+      setWhiteboardState(prev => ({ ...prev, currentDrawing: null }))
     }
   }
 
@@ -584,7 +586,7 @@ const InteractiveWhiteboard: React.FC<{
       socket?.emit('whiteboard:background', { roomId, background: imageData })
     }
     reader.readAsDataURL(file)
-    e.target.value = '' // Reset input
+    e.target.value = ''
   }
 
   const zoomIn = () => {
@@ -600,11 +602,16 @@ const InteractiveWhiteboard: React.FC<{
     setPan({ x: 0, y: 0 })
   }
 
+  const toggleFill = () => {
+    setFillShapes(prev => !prev)
+  }
+
   if (!isVisible) return null
 
   const colors = [
     '#000000', '#dc2626', '#059669', '#2563eb',
-    '#ca8a04', '#9333ea', '#ea580c', '#475569'
+    '#ca8a04', '#9333ea', '#ea580c', '#475569',
+    '#ffffff', '#fbbf24', '#60a5fa', '#c084fc'
   ]
 
   const tools: { id: DrawingTool; icon: React.ReactNode; label: string }[] = [
@@ -616,13 +623,13 @@ const InteractiveWhiteboard: React.FC<{
     { id: 'arrow', icon: <ArrowRight size={18} />, label: 'Arrow' },
     { id: 'text', icon: <Type size={18} />, label: 'Text' },
     { id: 'eraser', icon: <Eraser size={18} />, label: 'Eraser' },
-    { id: 'select', icon: <MousePointer size={18} />, label: 'Select & Pan' },
+    { id: 'select', icon: <Move size={18} />, label: 'Select & Pan' },
   ]
 
   return (
     <div className={cn(
       "bg-white border border-gray-200 rounded-xl shadow-lg flex flex-col transition-all duration-300",
-      mode === 'split' ? "w-1/2 h-full" : "fixed inset-0 z-50 m-4"
+      mode === 'split' ? "w-1/2 h-full" : "fixed inset-0 z-50"
     )}>
       {/* Whiteboard Header */}
       <div className="flex-shrink-0 p-3 border-b border-gray-200 bg-white rounded-t-xl">
@@ -636,13 +643,30 @@ const InteractiveWhiteboard: React.FC<{
               {!canDraw && (
                 <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">View Only</span>
               )}
+              {fillShapes && (
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Fill On</span>
+              )}
             </div>
             
             <div className="flex items-center gap-1">
               {canDraw && (
                 <>
+                  {/* Fill Toggle */}
+                  <button
+                    onClick={toggleFill}
+                    className={cn(
+                      "p-2 rounded-lg transition-colors",
+                      fillShapes 
+                        ? "bg-blue-100 text-blue-600" 
+                        : "text-gray-600 hover:bg-gray-100"
+                    )}
+                    title={fillShapes ? "Disable Fill" : "Enable Fill"}
+                  >
+                    <Square size={16} className={fillShapes ? "fill-current" : ""} />
+                  </button>
+
                   {/* Zoom Controls */}
-                  <div className="flex items-center gap-1 mr-2">
+                  <div className="flex items-center gap-1 mr-2 border-l border-gray-300 pl-2">
                     <button
                       onClick={zoomOut}
                       disabled={zoom <= 0.25}
@@ -721,7 +745,7 @@ const InteractiveWhiteboard: React.FC<{
                     key={tool.id}
                     onClick={() => setWhiteboardState(prev => ({ ...prev, tool: tool.id }))}
                     className={cn(
-                      "p-1.5 rounded-md transition-all duration-200",
+                      "p-1.5 rounded-md transition-all duration-200 flex items-center gap-1",
                       whiteboardState.tool === tool.id 
                         ? "bg-blue-600 text-white shadow-sm" 
                         : "hover:bg-gray-200 text-gray-700"
@@ -729,18 +753,20 @@ const InteractiveWhiteboard: React.FC<{
                     title={tool.label}
                   >
                     {tool.icon}
+                    <span className="text-xs hidden sm:inline">{tool.label}</span>
                   </button>
                 ))}
               </div>
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                 {colors.map(color => (
                   <button
                     key={color}
                     onClick={() => setWhiteboardState(prev => ({ ...prev, color }))}
                     className={cn(
-                      "w-5 h-5 rounded-full border transition-all",
-                      whiteboardState.color === color ? "border-blue-500 scale-110" : "border-gray-300"
+                      "w-6 h-6 rounded-full border-2 transition-all transform hover:scale-110",
+                      whiteboardState.color === color ? "border-blue-500 scale-110" : "border-gray-300",
+                      color === '#ffffff' && 'border-gray-400'
                     )}
                     style={{ backgroundColor: color }}
                     title={color}
@@ -748,11 +774,12 @@ const InteractiveWhiteboard: React.FC<{
                 ))}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-1">
+                <span className="text-xs text-gray-600">Size:</span>
                 <input
                   type="range"
                   min="1"
-                  max="8"
+                  max="20"
                   value={whiteboardState.strokeWidth}
                   onChange={(e) => setWhiteboardState(prev => ({ 
                     ...prev, 
@@ -767,10 +794,11 @@ const InteractiveWhiteboard: React.FC<{
         </div>
       </div>
 
-      {/* Whiteboard Canvas */}
+      {/* Whiteboard Canvas - FULL AREA */}
       <div 
         ref={containerRef}
         className="flex-1 relative bg-white rounded-b-xl overflow-hidden min-h-0"
+        style={mode === 'full' ? { height: 'calc(100vh - 80px)' } : {}}
       >
         <canvas
           ref={canvasRef}
@@ -779,11 +807,16 @@ const InteractiveWhiteboard: React.FC<{
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
           className={cn(
-            "absolute inset-0 w-full h-full",
+            "absolute inset-0 w-full h-full cursor-crosshair",
             canDraw ? (whiteboardState.tool === 'select' ? "cursor-grab" : "cursor-crosshair") : "cursor-not-allowed",
             isPanning && "cursor-grabbing"
           )}
         />
+        
+        {/* Drawing boundary indicator */}
+        {isDrawing && (
+          <div className="absolute inset-0 border-2 border-dashed border-blue-400 pointer-events-none"></div>
+        )}
       </div>
     </div>
   )
@@ -797,15 +830,13 @@ const ChatPanel: React.FC<{
   members: Member[]
   isOpen: boolean
   onClose: () => void
-}> = ({ messages, onSendMessage, onFileUpload, members, isOpen, onClose }) => {
+  currentUserId: string
+}> = ({ messages, onSendMessage, onFileUpload, members, isOpen, onClose, currentUserId }) => {
   const [message, setMessage] = useState("")
   const [chatMode, setChatMode] = useState<ChatMode>('normal')
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const chatScrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // Track received message IDs to prevent duplicates
-  const receivedMessageIds = useRef(new Set<string>())
 
   useEffect(() => {
     if (chatScrollRef.current) {
@@ -818,12 +849,18 @@ const ChatPanel: React.FC<{
     if (message.trim()) {
       onSendMessage(message.trim())
       setMessage("")
+      setShowEmojiPicker(false)
     }
   }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File size too large. Maximum 5MB allowed.")
+        return
+      }
       onFileUpload(file)
       e.target.value = ''
     }
@@ -834,14 +871,13 @@ const ChatPanel: React.FC<{
     setShowEmojiPicker(false)
   }
 
-  // Filter out duplicate messages
-  const uniqueMessages = messages.filter(msg => {
-    if (receivedMessageIds.current.has(msg.id)) {
-      return false
-    }
-    receivedMessageIds.current.add(msg.id)
-    return true
-  })
+  // Filter unique messages and mark as mine
+  const processedMessages = messages.filter((msg, index, self) => 
+    index === self.findIndex(m => m.id === msg.id)
+  ).map(msg => ({
+    ...msg,
+    isMe: msg.senderId === currentUserId
+  }))
 
   if (!isOpen) return null
 
@@ -858,60 +894,60 @@ const ChatPanel: React.FC<{
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setChatMode(chatMode === 'normal' ? 'full' : 'normal')}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
+            className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded hover:bg-gray-200"
           >
-            {chatMode === 'normal' ? <Maximize2 size={18} /> : <Minimize2 size={18} />}
+            {chatMode === 'normal' ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
           </button>
           <button 
             onClick={onClose} 
-            className="text-gray-500 hover:text-gray-700 transition-colors"
+            className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded hover:bg-gray-200"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3" ref={chatScrollRef}>
-        {uniqueMessages.length === 0 ? (
+        {processedMessages.length === 0 ? (
           <div className="text-center text-gray-500 mt-8">
             <MessageSquare size={32} className="mx-auto mb-2 opacity-50" />
-            <p>No messages yet</p>
-            <p className="text-sm">Start a conversation!</p>
+            <p className="text-sm">No messages yet</p>
+            <p className="text-xs text-gray-400">Start a conversation!</p>
           </div>
         ) : (
-          uniqueMessages.map(msg => (
+          processedMessages.map(msg => (
             <div 
               key={msg.id} 
               className={cn(
-                "flex flex-col max-w-[85%] animate-in fade-in",
+                "flex flex-col max-w-[85%] animate-in fade-in duration-200",
                 msg.isMe ? "ml-auto items-end" : "mr-auto items-start"
               )}
             >
               {!msg.isMe && (
-                <span className="text-xs text-gray-600 font-medium mb-1">
+                <span className="text-xs text-gray-600 font-medium mb-1 px-1">
                   {msg.senderName}
                 </span>
               )}
               <div className={cn(
-                "px-3 py-2 rounded-lg text-sm",
+                "px-3 py-2 rounded-lg text-sm break-words max-w-full",
                 msg.isMe 
                   ? "bg-blue-600 text-white rounded-br-none" 
                   : "bg-gray-100 text-gray-800 rounded-bl-none"
               )}>
                 {msg.type === 'text' ? (
-                  <p className="break-words">{msg.text}</p>
+                  <p className="whitespace-pre-wrap">{msg.text}</p>
                 ) : (
                   <div className="max-w-full">
                     <img 
                       src={msg.fileData} 
                       alt="Shared file" 
-                      className="max-w-full rounded max-h-48 object-cover cursor-pointer"
+                      className="max-w-full rounded max-h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
                       onClick={() => window.open(msg.fileData, '_blank')}
                     />
                   </div>
                 )}
               </div>
-              <span className="text-xs text-gray-500 mt-1">
+              <span className="text-xs text-gray-500 mt-1 px-1">
                 {msg.time}
               </span>
             </div>
@@ -925,7 +961,7 @@ const ChatPanel: React.FC<{
           className="hidden" 
           ref={fileInputRef} 
           onChange={handleFileUpload} 
-          accept="image/*" 
+          accept="image/*, .pdf, .doc, .docx" 
         />
         
         <div className="flex gap-1">
@@ -933,6 +969,7 @@ const ChatPanel: React.FC<{
             type="button" 
             onClick={() => fileInputRef.current?.click()} 
             className="p-2 text-gray-500 hover:text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            title="Attach file"
           >
             <Paperclip size={16} />
           </button>
@@ -940,6 +977,7 @@ const ChatPanel: React.FC<{
             type="button"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
             className="p-2 text-gray-500 hover:text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            title="Add emoji"
           >
             <Smile size={16} />
           </button>
@@ -952,7 +990,7 @@ const ChatPanel: React.FC<{
                 key={emoji}
                 type="button"
                 onClick={() => addEmoji(emoji)}
-                className="p-1 hover:bg-gray-100 rounded text-lg"
+                className="p-1 hover:bg-gray-100 rounded text-lg transition-colors"
               >
                 {emoji}
               </button>
@@ -965,11 +1003,18 @@ const ChatPanel: React.FC<{
           placeholder="Type a message..." 
           value={message} 
           onChange={e => setMessage(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              handleSubmit(e)
+            }
+          }}
         />
         <button 
           type="submit" 
-          className="bg-blue-600 p-2 rounded-lg text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-blue-600 p-2 rounded-lg text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           disabled={!message.trim()}
+          title="Send message"
         >
           <Send size={16} />
         </button>
@@ -978,7 +1023,7 @@ const ChatPanel: React.FC<{
   )
 }
 
-// Enhanced Participants Panel with Hand Raise and Host Controls
+// Enhanced Participants Panel
 const ParticipantsPanel: React.FC<{
   members: Member[]
   isHost: boolean
@@ -1126,7 +1171,7 @@ const ParticipantsPanel: React.FC<{
   )
 }
 
-// Enhanced Main Meeting Component
+// Main Meeting Component
 const MeetingRoom: React.FC = () => {
   const router = useRouter()
   const pathname = usePathname()
@@ -1304,11 +1349,11 @@ const MeetingRoom: React.FC = () => {
       }
       receivedMessageIds.current.add(msg.id)
       
-      const isMe = msg.senderId === user.id
-      setMessages(prev => [...prev, { ...msg, isMe }])
+      // Add message to state - let the ChatPanel handle isMe
+      setMessages(prev => [...prev, msg])
       
       // Show notification for new messages when chat is closed
-      if (!showChat && !isMe) {
+      if (!showChat && msg.senderId !== user.id) {
         toast.info(`New message from ${msg.senderName}`)
       }
     })
@@ -1444,7 +1489,7 @@ const MeetingRoom: React.FC = () => {
     }
     
     // Add message locally immediately for better UX
-    setMessages(prev => [...prev, { ...msg, isMe: true }])
+    setMessages(prev => [...prev, msg])
     socketRef.current?.emit('chat:send', { roomId: meetingId, message: msg })
   }
 
@@ -1462,7 +1507,7 @@ const MeetingRoom: React.FC = () => {
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
       
-      setMessages(prev => [...prev, { ...msg, isMe: true }])
+      setMessages(prev => [...prev, msg])
       socketRef.current?.emit('chat:send', { roomId: meetingId, message: msg })
     }
     reader.readAsDataURL(file)
@@ -1871,6 +1916,7 @@ const MeetingRoom: React.FC = () => {
         members={members}
         isOpen={showChat}
         onClose={() => setShowChat(false)}
+        currentUserId={user?.id || ''}
       />
 
       {/* Participants Panel */}
