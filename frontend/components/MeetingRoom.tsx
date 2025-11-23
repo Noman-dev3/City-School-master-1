@@ -1216,7 +1216,8 @@ const MeetingRoom: React.FC = () => {
   // Refs
   const socketRef = useRef<Socket | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const controlsTimeoutRef = useRef<NodeJS.Timeout>()
+  // const controlsTimeoutRef = useRef<NodeJS.Timeout>()
+  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const receivedReactionIds = useRef(new Set<string>())
   const receivedMessageIds = useRef(new Set<string>())
 
