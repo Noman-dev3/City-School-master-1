@@ -20,7 +20,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cors": "^2.8.5",
-    "excalidraw": "^0.6.4",
     "express": "^5.1.0",
     "fabric": "^6.9.0",
     "http": "^0.0.1-security",
